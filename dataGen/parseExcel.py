@@ -32,5 +32,5 @@ class ExcelData(object):
     def query_current_frames(self):
         return self.df
 
-    def current_data_2_frames(self):
-        self.df.to_csv(path_or_buf="./data/result.csv", index=False, encoding="utf-8")
+    def current_data_2_frames(self, output_path):
+        self.df.to_csv(path_or_buf=output_path, index=False, encoding="utf-8")
