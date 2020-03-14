@@ -144,6 +144,48 @@ for cuboid in cuboids:
             apex["dimension.name"] = "apex"
             apex["dimension.value"] = "*"
             apex.to_csv(output + cuboid_name + ".csv")
+    elif len(hierarchies) == len(dms):
+        # print "base"
+        data.to_csv(output + cuboid_name + ".csv")
     else:
         for cartesian_hierarchies in cartesian(hierarchies):
-            print cartesian_hierarchies
+            # print "alfred"
+            # print cartesian_hierarchies
+            # 4. for calculation lattice in  n-dimension cuboids,
+            #    group by the higher level hierarchy in such dimension
+            group_hierarchy = []
+            for tmp_hierarchy in cartesian_hierarchies:
+                for tmp_dimension in cuboid:
+                    try:
+                        for index in range(tmp_dimension["hierarchy"].index(tmp_hierarchy) + 1):
+                            group_hierarchy.append(tmp_dimension["hierarchy"][index])
+                    except ValueError, e:
+                        # do nothing
+                        print "not in the array"
+
+            # print group_hierarchy
+            data_lattice = data.groupby(group_hierarchy)["SALES_QTY", "SALES_VALUE"].sum().reset_index()
+            # print data_lattice.reset_index()
+
+            # 4.1 fill the other
+            fill_hierarchies = []
+            for dm in dms:
+                for her in dm["hierarchy"]:
+                    if her not in group_hierarchy:
+                        fill_hierarchies.append(her)
+            # print fill_hierarchies
+
+            for fill_hier in fill_hierarchies:
+                data_lattice[fill_hier] = "*"
+
+            # 4.4 fill cube metadata
+            data_lattice["dimension.name"] = cuboid_name
+            data_lattice["dimension.value"] = ""
+
+            for condi in cartesian_hierarchies:
+                data_lattice.loc[:, "dimension.value"] = \
+                    data_lattice.loc[:, "dimension.value"].apply(lambda x: str(x)) + "," + \
+                    data_lattice.loc[:, condi.encode("utf8")].apply(lambda x: condi.encode("utf8") + ":" + str(x))
+
+            data_lattice.to_csv(output + cuboid_name + "-".join(cartesian_hierarchies) + ".csv")
+

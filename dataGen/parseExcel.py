@@ -23,7 +23,7 @@ class ExcelData(object):
             df = df[~df[index_col].isnull()]
 
         # 3. fill the QUARTER
-        df.loc[:, "QUARTER"] = df.loc[:, "MONTH"].apply(lambda x: int(x / 3) + 1)
+        df.loc[:, "QUARTER"] = df.loc[:, "MONTH"].apply(lambda x: int((x - 1) / 3) + 1)
 
         # 4. fill the MKT data with company name
         df.loc[:, "MKT"] = df.loc[:, "COMPANY"].apply(lambda x: x)
