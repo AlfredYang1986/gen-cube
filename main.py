@@ -128,7 +128,8 @@ for cuboid in cuboids:
     print hierarchies
 
     if len(hierarchies) == 0:
-        print "base"
+        print "apex"
+
     else:
         for cartesian_hierarchies in cartesian(hierarchies):
             print cartesian_hierarchies

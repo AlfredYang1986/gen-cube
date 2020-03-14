@@ -33,9 +33,12 @@ class ExcelData(object):
         # df.loc[:, "SALES_QTY"] = df.loc[:, "SALES_QTY"].apply(lambda x: 0.0 if x.isnull() else x)
         # df.loc[:, "SALES_VALUE"] = df.loc[:, "SALES_VALUE"].apply(lambda x: 0.0 if x.isnull() else x)
 
+        # 7. fill a column with COUNTRY, which represents the highest level of geo dimension
+        df.loc[:, "COUNTRY_NAME"] = "CHINA"
+
         # 5. prune the data with only which need
         df = df[["YEAR", "QUARTER", "MONTH",
-                 "PROVINCE_NAME", "CITY_NAME",
+                 "COUNTRY_NAME", "PROVINCE_NAME", "CITY_NAME",
                  "COMPANY", "MKT", "MOLE_NAME", "PRODUCT_NAME",
                  "SALES_QTY", "SALES_VALUE"]]
 
