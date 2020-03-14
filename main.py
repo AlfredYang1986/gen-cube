@@ -25,6 +25,7 @@ Parameters
 path = "./data/data.xlsx"
 frame = "./data/frames/origin.csv"
 dimensions = "./data/define/example.json"
+output = "./data/frames/"
 
 """
 0. test the data clean functions
@@ -57,9 +58,11 @@ if not os.path.isfile(frame):
 """
 1.5. test if the finally data frame is good enough to construct data cube
 """
-if test and os.path.isfile(frame):
-    data = pd.read_csv(frame)
 
+data = pd.read_csv(frame)
+
+if test and os.path.isfile(frame):
+    # data = pd.read_csv(frame)
     # 1. every dimension should have no null or nan
     with open(dimensions, "r") as f:
         dm = json.loads(f.read())
@@ -85,8 +88,7 @@ with open(dimensions, "r") as f:
 dms = dm["dimensions"]
 
 # 1. for all dimensions in these example is 3-D cuboid or base cuboid
-print len(dms)
-print 2 ** len(dms)
+# print dms
 # 1.1 for n-dimension should have 2^n cuboids (or panels)
 #     in this place I am using the combination (排列组合)
 cuboids = []
@@ -95,24 +97,23 @@ for ld in range(len(dms) + 1):
         # 1.2 construct bitmap dimension indexing
         #     also can be save the last when you want to build indexing of the cuboids
         cuboids.append(cuboid)
-
-print cuboids
+# print cuboids
 
 # 2. for all cuboid, build lattices base on the dimension's concept hierarchies
 for cuboid in cuboids:
-    print cuboid
+    # print cuboid
     # 2.1 create metadata for the cuboid
     #    2.1.1 the name of the cuboid for now only
     dimensions_names = []
     for dimension in cuboid:
         dimensions_names.append(dimension["name"])
-    print dimensions_names
+    # print dimensions_names
     dimension_count = len(cuboid)
     cuboid_name = "apex" \
         if dimension_count == 0 \
         else "base" if dimension_count == len(dms) \
         else str(dimension_count) + "-D-" + "-".join(dimensions_names)
-    print cuboid_name
+    # print cuboid_name
 
     # 3. construction for the lattices of the cuboid
     #   3.1 construction all the combination in the dimension concept hierarchies
@@ -125,11 +126,24 @@ for cuboid in cuboids:
     for har in cuboid:
         hierarchies.append(har["hierarchy"])
 
-    print hierarchies
-
     if len(hierarchies) == 0:
-        print "apex"
-
+        # print "apex"
+        # 3.2 for apex lattice, replace dimension with * character
+        #     star node
+        all_hierarchies = []
+        for dm in dms:
+            for her in dm["hierarchy"]:
+                all_hierarchies.append(her)
+        for col in all_hierarchies:
+            data.loc[:, "apex"] = "alfred"
+            apex = data.groupby(["apex"])["SALES_QTY", "SALES_VALUE"].sum()
+            # 3.3 fill dimension columns
+            for hier in all_hierarchies:
+                apex[hier] = "*"
+            # 3.4 fill cube metadata
+            apex["dimension.name"] = "apex"
+            apex["dimension.value"] = "*"
+            apex.to_csv(output + cuboid_name + ".csv")
     else:
         for cartesian_hierarchies in cartesian(hierarchies):
             print cartesian_hierarchies
