@@ -1,5 +1,8 @@
 .idea
 *.iml
 .swp
-data/*
+data/*.xlsx
+data/*.csv
+data/frames/*.xlsx
+data/frames/*.csv
 *.pyc
