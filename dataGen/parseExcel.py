@@ -20,7 +20,24 @@ class ExcelData(object):
 
         # 2. clean the null in the not null column
         for index_col in arr_not_null:
-            df = df[~df["PROVINCE_NAME"].isnull()]
+            df = df[~df[index_col].isnull()]
+
+        # 3. fill the QUARTER
+        df.loc[:, "QUARTER"] = df.loc[:, "MONTH"].apply(lambda x: int(x / 3) + 1)
+
+        # 4. fill the MKT data with company name
+        df.loc[:, "MKT"] = df.loc[:, "COMPANY"].apply(lambda x: x)
+
+        # 6. for every measure should not have null or NaN
+        df = df.fillna(0.0)
+        # df.loc[:, "SALES_QTY"] = df.loc[:, "SALES_QTY"].apply(lambda x: 0.0 if x.isnull() else x)
+        # df.loc[:, "SALES_VALUE"] = df.loc[:, "SALES_VALUE"].apply(lambda x: 0.0 if x.isnull() else x)
+
+        # 5. prune the data with only which need
+        df = df[["YEAR", "QUARTER", "MONTH",
+                 "PROVINCE_NAME", "CITY_NAME",
+                 "COMPANY", "MKT", "MOLE_NAME", "PRODUCT_NAME",
+                 "SALES_QTY", "SALES_VALUE"]]
 
         if self.df is None:
             self.df = df
