@@ -16,12 +16,18 @@ from phDimension import PhDimension
 class PhCube(object):
     def __init__(self, frame_path, dimension_path, output_path):
         self.data = pd.read_csv(frame_path)
+        self.data.loc[:, "apex"] = "alfred"
+        self.data.loc[:, "dimension.name"] = "*"
+        self.data.loc[:, "dimension.value"] = "*"
         self.dms = PhDimension(dimension_path)
-        # self.all_hierarchies = self.dms.gen_all_hierarchies()
         self.cuboids = []
         self.job_id = str(uuid.uuid4())
         os.mkdir(output_path + self.job_id)
-        self.output = output_path + self.job_id + "/"
+        os.mkdir(output_path + self.job_id + "/lattices/")
+        os.mkdir(output_path + self.job_id + "/result/")
+        self.output = output_path + self.job_id + "/lattices/"
+        self.result_path = output_path + self.job_id + "/result/cube.csv"
+        self.group_conditions = {}
 
     def gen_cuboids(self):
         if len(self.cuboids) > 0:
@@ -50,7 +56,6 @@ class PhCube(object):
             dimensions_names = []
             for dimension in cuboid:
                 dimensions_names.append(dimension["name"])
-            # print dimensions_names
             dimension_count = len(cuboid)
             return "apex" \
                 if dimension_count == 0 \
@@ -74,8 +79,6 @@ class PhCube(object):
         #     star node
         def gen_apex_lattice():
             all_hierarchies = self.dms.get_all_hierarchies()
-            # for col in all_hierarchies:
-            self.data.loc[:, "apex"] = "alfred"
             apex = self.data.groupby(["apex"])["SALES_QTY", "SALES_VALUE"].sum()
             # 3.3 fill dimension columns
             for hier in all_hierarchies:
@@ -84,10 +87,18 @@ class PhCube(object):
             apex["dimension.name"] = "apex"
             apex["dimension.value"] = "*"
             apex = apex.reset_index(drop=True)
-            apex.to_csv(self.output + cuboid_name + ".csv")
+            self.group_conditions[cuboid_name] = []
+            if os.path.isfile(self.output + cuboid_name + "csv"):
+                apex.to_csv(self.output + cuboid_name + ".csv", mode="a")
+            else:
+                apex.to_csv(self.output + cuboid_name + ".csv")
 
         def gen_base_lattice():
-            self.data.to_csv(self.output + cuboid_name + ".csv")
+            self.group_conditions[cuboid_name] = []
+            if os.path.isfile(self.output + cuboid_name + "csv"):
+                self.data.to_csv(self.output + cuboid_name + ".csv", mode="a")
+            else:
+                self.data.to_csv(self.output + cuboid_name + ".csv")
 
         # 4. for calculation lattice in  n-dimension cuboids,
         #    group by the higher level hierarchy in such dimension
@@ -102,15 +113,7 @@ class PhCube(object):
                         except ValueError, e:
                             print "not in the array"
                 data_lattice = self.data.groupby(group_hierarchy)["SALES_QTY", "SALES_VALUE"].sum().reset_index()
-                # 4.1 fill the other
-                fill_hierarchies = []
-                for dm in self.dms.get_dimensions():
-                    for her in dm["hierarchy"]:
-                        if her not in group_hierarchy:
-                            fill_hierarchies.append(her)
-                # print fill_hierarchies
-                for fill_hier in fill_hierarchies:
-                    data_lattice[fill_hier] = "*"
+                data_lattice = self.fill_lost_dimension(data_lattice, group_hierarchy)
                 # 4.4 fill cube metadata
                 data_lattice["dimension.name"] = cuboid_name
                 data_lattice["dimension.value"] = ""
@@ -118,8 +121,14 @@ class PhCube(object):
                     data_lattice.loc[:, "dimension.value"] = \
                         data_lattice.loc[:, "dimension.value"].apply(lambda x: str(x)) + "," + \
                         data_lattice.loc[:, condi.encode("utf8")].apply(lambda x: condi.encode("utf8") + ":" + str(x))
-                data_lattice.to_csv(self.output + cuboid_name + "-"
-                                    + "-".join(cartesian_hierarchies) + ".csv")
+                self.group_conditions[cuboid_name + "-" + "-".join(cartesian_hierarchies)] = group_hierarchy
+                if os.path.isfile(self.output + cuboid_name + "-"
+                                  + "-".join(cartesian_hierarchies) + ".csv"):
+                    data_lattice.to_csv(self.output + cuboid_name + "-"
+                                        + "-".join(cartesian_hierarchies) + ".csv", mode="a")
+                else:
+                    data_lattice.to_csv(self.output + cuboid_name + "-"
+                                        + "-".join(cartesian_hierarchies) + ".csv")
 
         cuboid_name = gen_cuboid_name()
         hierarchies = gen_cur_hierarchies()
@@ -130,3 +139,33 @@ class PhCube(object):
             gen_base_lattice()
         else:
             gen_dimension_lattice()
+
+    def fill_lost_dimension(self, data_lattice, group_hierarchy):
+        # 4.1 fill the other
+        fill_hierarchies = []
+        for dm in self.dms.get_dimensions():
+            for her in dm["hierarchy"]:
+                if her not in group_hierarchy:
+                    fill_hierarchies.append(her)
+        for fill_hier in fill_hierarchies:
+            data_lattice[fill_hier] = "*"
+
+        return data_lattice
+
+    # 5. every chunks gen a different intermediate file,
+    #    and in this files may have group result with same condition
+    #    we can use hadoop hdfs to eliminate this questions
+    def gen_final_result(self):
+        dirs = os.listdir(self.output)
+        for f in dirs:
+            print "current lattice: " + f[0:f.index(".")]
+            condition = self.group_conditions[f[0:f.index(".")]]
+            tmpdf = pd.read_csv(self.output + f)
+            if len(condition) > 0:
+                tmpdf = tmpdf.groupby(condition + ["dimension.name", "dimension.value"])["SALES_QTY", "SALES_VALUE"]\
+                    .sum().reset_index()
+                tmpdf = self.fill_lost_dimension(tmpdf, condition)
+            if os.path.isfile(self.result_path):
+                tmpdf[self.dms.get_select_conditions()].to_csv(self.result_path, mode="a")
+            else:
+                tmpdf[self.dms.get_select_conditions()].to_csv(self.result_path)
