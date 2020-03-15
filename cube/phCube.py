@@ -111,7 +111,8 @@ class PhCube(object):
                             for index in range(tmp_dimension["hierarchy"].index(tmp_hierarchy) + 1):
                                 group_hierarchy.append(tmp_dimension["hierarchy"][index])
                         except ValueError, e:
-                            print "not in the array"
+                            pass
+                            # print "not in the array"
                 data_lattice = self.data.groupby(group_hierarchy)["SALES_QTY", "SALES_VALUE"].sum().reset_index()
                 data_lattice = self.fill_lost_dimension(data_lattice, group_hierarchy)
                 # 4.4 fill cube metadata
@@ -158,7 +159,7 @@ class PhCube(object):
     def gen_final_result(self):
         dirs = os.listdir(self.output)
         for f in dirs:
-            print "current lattice: " + f[0:f.index(".")]
+            # print "current lattice: " + f[0:f.index(".")]
             condition = self.group_conditions[f[0:f.index(".")]]
             tmpdf = pd.read_csv(self.output + f)
             if len(condition) > 0:
