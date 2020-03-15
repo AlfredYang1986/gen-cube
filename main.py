@@ -57,12 +57,8 @@ if not os.path.isfile(frame):
 """
 1.5. test if the finally data frame is good enough to construct data cube
 """
-
 data = pd.read_csv(frame)
-
 if test and os.path.isfile(frame):
-    # data = pd.read_csv(frame)
-    # 1. every dimension should have no null or nan
     with open(dimensions, "r") as f:
         dm = json.loads(f.read())
 

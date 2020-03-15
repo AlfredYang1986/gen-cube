@@ -5,4 +5,5 @@ data/*.xlsx
 data/*.csv
 data/frames/*.xlsx
 data/frames/*.csv
+data/frames/*
 *.pyc
