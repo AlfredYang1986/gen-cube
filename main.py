@@ -8,6 +8,7 @@ Created on Fri Mar 13 19:57:27 2020
 import os
 from dataCleaning import ExcelData
 from cube import PhCube
+from testFunctions import validate_input_data
 
 
 """
@@ -37,6 +38,8 @@ if not os.path.isfile(frame):
                              sheet_name="12",
                              arr_not_null=["PROVINCE_NAME", "MOLE_NAME", "PRODUCT_NAME"])
     data.current_data_2_frames(output_path=frame)
+
+validate_input_data(frame, dimensions, 0)
 
 """
 2. gen cube
